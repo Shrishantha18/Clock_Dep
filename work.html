@@ -1,0 +1,241 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Animated Clock & Date</title>
+	<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+	<style>
+		:root {
+			--main-bg: linear-gradient(135deg, #232526, #414345);
+			--container-bg: rgba(255,255,255,0.07);
+			--container-border: rgba(255,255,255,0.18);
+			--text-main: #fff;
+			--text-date: #e0e0e0;
+			--shadow: #0008;
+			--shadow-date: #0006;
+			--glow1: #00ffe7;
+			--glow2: #00ffe7;
+			--button-bg: rgba(255,255,255,0.15);
+			--button-text: #fff;
+			--button-hover: rgba(255,255,255,0.25);
+		}
+		body[data-theme="light"] {
+			--main-bg: linear-gradient(135deg, #f8ffae, #43c6ac);
+			--container-bg: rgba(255,255,255,0.85);
+			--container-border: rgba(0,0,0,0.08);
+			--text-main: #232526;
+			--text-date: #414345;
+			--shadow: #fff8;
+			--shadow-date: #fff6;
+			--glow1: #43c6ac;
+			--glow2: #f8ffae;
+			--button-bg: rgba(0,0,0,0.08);
+			--button-text: #232526;
+			--button-hover: rgba(0,0,0,0.15);
+		}
+		body {
+			background: var(--main-bg);
+			min-height: 100vh;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			margin: 0;
+			font-family: 'Roboto', Arial, sans-serif;
+			transition: background 0.7s cubic-bezier(.39,.575,.565,1);
+			overflow: hidden;
+		}
+		.particles {
+			position: fixed;
+			top: 0; left: 0; width: 100vw; height: 100vh;
+			pointer-events: none;
+			z-index: 0;
+		}
+		.clock-container {
+			background: var(--container-bg);
+			box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.17);
+			border-radius: 30px;
+			padding: 40px 60px;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			backdrop-filter: blur(8px);
+			border: 1px solid var(--container-border);
+			animation: fadeIn 1.2s cubic-bezier(.39,.575,.565,1) both;
+			z-index: 1;
+		}
+		@keyframes fadeIn {
+			0% { opacity: 0; transform: translateY(40px) scale(0.95); }
+			100% { opacity: 1; transform: translateY(0) scale(1); }
+		}
+		.time {
+			font-family: 'Orbitron', monospace;
+			font-size: 4rem;
+			color: var(--text-main);
+			letter-spacing: 0.15em;
+			text-shadow: 0 2px 16px var(--shadow);
+			transition: color 0.3s, text-shadow 0.3s;
+			margin-bottom: 18px;
+			animation: popIn 1.2s cubic-bezier(.39,.575,.565,1) both;
+		}
+		@keyframes popIn {
+			0% { opacity: 0; transform: scale(0.7); }
+			100% { opacity: 1; transform: scale(1); }
+		}
+		.date {
+			font-size: 1.7rem;
+			color: var(--text-date);
+			letter-spacing: 0.08em;
+			font-weight: 500;
+			text-shadow: 0 1px 8px var(--shadow-date);
+			animation: slideIn 1.4s cubic-bezier(.39,.575,.565,1) both;
+			transition: color 0.3s, text-shadow 0.3s;
+		}
+		@keyframes slideIn {
+			0% { opacity: 0; transform: translateY(-30px); }
+			100% { opacity: 1; transform: translateY(0); }
+		}
+		.glow {
+			animation: glowPulse 2s infinite alternate;
+		}
+		@keyframes glowPulse {
+			from { text-shadow: 0 0 20px var(--glow1), 0 0 40px var(--glow2); }
+			to { text-shadow: 0 0 40px var(--glow1), 0 0 80px var(--glow2); }
+		}
+		.mode-toggle {
+			margin-top: 28px;
+			padding: 10px 28px;
+			border-radius: 20px;
+			border: none;
+			background: var(--button-bg);
+			color: var(--button-text);
+			font-size: 1.1rem;
+			font-weight: 700;
+			cursor: pointer;
+			box-shadow: 0 2px 8px #0002;
+			transition: background 0.3s, color 0.3s;
+			z-index: 2;
+		}
+		.mode-toggle:hover {
+			background: var(--button-hover);
+		}
+		.clock-anim {
+			animation: rotateClock 10s linear infinite;
+		}
+		@keyframes rotateClock {
+			0% { transform: rotate(-2deg) scale(1.01); }
+			50% { transform: rotate(2deg) scale(1.03); }
+			100% { transform: rotate(-2deg) scale(1.01); }
+		}
+		@media (max-width: 600px) {
+			.clock-container { padding: 20px 10px; }
+			.time { font-size: 2.2rem; }
+			.date { font-size: 1.1rem; }
+		}
+	</style>
+</head>
+</body>
+	<canvas class="particles"></canvas>
+	<div class="clock-container clock-anim">
+		<div id="time" class="time glow">00:00:00</div>
+		<div id="date" class="date">Month Day, Year</div>
+		<button class="mode-toggle" id="modeToggle">🌙 Dark Mode</button>
+	</div>
+	<script>
+		// Clock logic
+		function pad(n) { return n < 10 ? '0' + n : n; }
+		function updateClock() {
+			const now = new Date();
+			const hours = pad(now.getHours());
+			const mins = pad(now.getMinutes());
+			const secs = pad(now.getSeconds());
+			document.getElementById('time').textContent = `${hours}:${mins}:${secs}`;
+			const options = { month: 'long', day: 'numeric', year: 'numeric' };
+			document.getElementById('date').textContent = now.toLocaleDateString(undefined, options);
+		}
+		setInterval(updateClock, 1000);
+		updateClock();
+
+		// Light/Dark mode logic
+		const modeToggle = document.getElementById('modeToggle');
+		function setTheme(theme) {
+			document.body.setAttribute('data-theme', theme);
+			if (theme === 'light') {
+				modeToggle.textContent = '🌞 Light Mode';
+			} else {
+				modeToggle.textContent = '🌙 Dark Mode';
+			}
+		}
+		// Save mode in localStorage
+		modeToggle.addEventListener('click', () => {
+			const current = document.body.getAttribute('data-theme') || 'dark';
+			const next = current === 'dark' ? 'light' : 'dark';
+			setTheme(next);
+			localStorage.setItem('clock-theme', next);
+		});
+		// On load, set theme
+		(function() {
+			const saved = localStorage.getItem('clock-theme');
+			setTheme(saved === 'light' ? 'light' : 'dark');
+		})();
+
+		// Animated particles background
+		const canvas = document.querySelector('.particles');
+		const ctx = canvas.getContext('2d');
+		let particles = [];
+		function resizeCanvas() {
+			canvas.width = window.innerWidth;
+			canvas.height = window.innerHeight;
+		}
+		window.addEventListener('resize', resizeCanvas);
+		resizeCanvas();
+		function randomColor() {
+			const theme = document.body.getAttribute('data-theme') || 'dark';
+			return theme === 'light' ? 'rgba(67,198,172,0.18)' : 'rgba(0,255,231,0.13)';
+		}
+		function createParticles() {
+			particles = [];
+			for (let i = 0; i < 32; i++) {
+				particles.push({
+					x: Math.random() * canvas.width,
+					y: Math.random() * canvas.height,
+					r: 16 + Math.random() * 18,
+					dx: (Math.random() - 0.5) * 0.3,
+					dy: (Math.random() - 0.5) * 0.3,
+					color: randomColor()
+				});
+			}
+		}
+		function drawParticles() {
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			for (const p of particles) {
+				ctx.beginPath();
+				ctx.arc(p.x, p.y, p.r, 0, 2 * Math.PI);
+				ctx.fillStyle = p.color;
+				ctx.fill();
+			}
+		}
+		function animateParticles() {
+			for (const p of particles) {
+				p.x += p.dx;
+				p.y += p.dy;
+				if (p.x < -p.r) p.x = canvas.width + p.r;
+				if (p.x > canvas.width + p.r) p.x = -p.r;
+				if (p.y < -p.r) p.y = canvas.height + p.r;
+				if (p.y > canvas.height + p.r) p.y = -p.r;
+			}
+			drawParticles();
+			requestAnimationFrame(animateParticles);
+		}
+		createParticles();
+		animateParticles();
+		// Recreate particles on theme change
+		const observer = new MutationObserver(() => {
+			for (const p of particles) p.color = randomColor();
+		});
+		observer.observe(document.body, { attributes: true, attributeFilter: ['data-theme'] });
+	</script>
+</body>
+</html>
